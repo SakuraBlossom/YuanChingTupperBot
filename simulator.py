@@ -49,7 +49,7 @@ GAME_WORLDS =[
     
     # World 4 - Training Ground 1
     (("Hit the Blue target", "YAY! We hit the target!"),[
-        {"type" : 4, "goal_id": 1, "rel" : None, "colour" : (0,0,255),    "world" : (-4, 0) },
+        {"type" : 4, "goal_id": 1, "rel" : None, "colour" : (0,0,255),    "world" : (-3, 0.5) },
         {"type" : 1, "goal_id": None, "rel" : None, "colour" : (255,0,0), "world" : (-2, 0) },
     ]),
 
@@ -158,14 +158,18 @@ class AUVInterface:
         self.yaw = self.gama_sim.global_yaw
         self.altitude = self.gama_sim.global_altitude
         
+        theta_tolerance = 3 # in degs
+        myDetectedThetas = set()
         self.detections.clear()
-        for obj in self.gama_sim.objs:
+        for obj in sorted(self.gama_sim.objs, key=lambda obj : obj["rel"][1]):
             if obj["type"] is None:
                 continue
 
-            obj_theta = math.atan2(obj["rel"][0], obj["rel"][1])
-            if (0 < obj["rel"][1] <= AERIAL_FOV_RADIUS and 2*abs(obj_theta) < CAMERA_FOV_RADS):
-                self.detections.append((obj["type"], int(np.rad2deg(obj_theta))))
+            obj_theta_rads = math.atan2(obj["rel"][0], obj["rel"][1])
+            obj_theta_degs = int(np.rad2deg(obj_theta_rads))
+            if (0 < obj["rel"][1] <= AERIAL_FOV_RADIUS and 2*abs(obj_theta_rads) < CAMERA_FOV_RADS) and not obj_theta_degs in myDetectedThetas:
+                self.detections.append((obj["type"], obj_theta_degs))
+                myDetectedThetas.update([i for i in range(obj_theta_degs-theta_tolerance,obj_theta_degs+theta_tolerance+1)])
 
 
     def setSpeedXY(self, thrust_left : float, thrust_right : float):
@@ -280,6 +284,7 @@ class SimpleAUVSimulatorGame:
         
         # Features
         self.isPerfectControl = isPerfectControl
+        self.view_display_subtext = None
 
     def restart(self):
         global GAME_CURRENT_WORLD
@@ -303,7 +308,6 @@ class SimpleAUVSimulatorGame:
         self.time_diff = 0
         self.start_time = time.time()
         self.view_display_text = None
-        self.view_display_subtext = None
         self.view_display_objective = self.game_phrases[0]
         
         self.last_cmd_fwd   = 0
@@ -368,11 +372,6 @@ class SimpleAUVSimulatorGame:
         rel_yaw_enu     = np.clip(rel_turn_enu, -PLAYER_YAW_STEP_ENU,  PLAYER_YAW_STEP_ENU)
         rel_depth_enu   = 0
         
-        if self.hasEpochEnded():
-            rel_fwd_enu  = 0
-            rel_side_enu = 0
-            rel_yaw_enu  = 0
-
         # Update Depth
         #elif self.depth_PID_controller:
         #    tick_diff = (time.time() - self.depth_controller_last_tick)
@@ -799,6 +798,12 @@ class SimpleAUVSimulatorGame:
             rel_yaw_enu += PLAYER_YAW_STEP_ENU
         if pressed[pygame.K_e]:
             rel_yaw_enu -= PLAYER_YAW_STEP_ENU
+
+        # Ignore movement if epoch has ended
+        if self.hasEpochEnded():
+            rel_fwd_enu  = 0
+            rel_side_enu = 0
+            rel_yaw_enu  = 0
 
         return (rel_fwd_enu, rel_side_enu, rel_yaw_enu)
 
