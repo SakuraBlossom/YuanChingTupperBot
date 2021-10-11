@@ -47,13 +47,19 @@ GAME_WORLDS =[
         {"type" : 4, "goal_id": 1, "rel" : None, "colour" : (0,0,255),   "world" : (-4, 0) }
     ]),
     
-    # World 4 - Training Ground 2 with Random positions
+    # World 4 - Training Ground 1
+    (("Hit the Blue target", "YAY! We hit the target!"),[
+        {"type" : 4, "goal_id": 1, "rel" : None, "colour" : (0,0,255),    "world" : (-4, 0) },
+        {"type" : 1, "goal_id": None, "rel" : None, "colour" : (255,0,0), "world" : (-2, 0) },
+    ]),
+
+    # World 5 - Training Ground 2 with Random positions
     (("Hit the Blue target", "YAY! We hit the target!"),[
         {"type" : 4, "goal_id": 1,    "rel" : None, "colour" : (0,0,255),   "world" : (GAME_RANDOM_OFFSET_GATE, 10) },
         {"type" : 1, "goal_id": None, "rel" : None, "colour" : (255,0,0),   "world" : (GAME_RANDOM_OFFSET_OBSTACLE, 5) },
     ]),
     
-    # World 5 - Actual Gate Task with Random positions
+    # World 6 - Actual Gate Task with Random positions
     (("Enter the Gate!", "YAY! We passed through the gate!"),[
         {"type" : None, "goal_id": 1, "rel" : None, "colour" : None,        "world" : (GAME_RANDOM_OFFSET_GATE-0.1, 9.85) },
         {"type" : None, "goal_id": 1, "rel" : None, "colour" : None,        "world" : (GAME_RANDOM_OFFSET_GATE+0.1, 9.85) },
@@ -454,6 +460,7 @@ class SimpleAUVSimulatorGame:
         if all(self.goals_achieved):
             self.view_display_objective = None
             self.displayResult(self.game_phrases[1], (22, 160, 133))
+            self.view_display_subtext = self.font_med.render("Good Job!", True, (0,0,0))
             
         # Check if time exceeded
         if self.time_diff > 60*10:
@@ -474,14 +481,13 @@ class SimpleAUVSimulatorGame:
     def hasEpochEnded(self):
         return (self.view_display_text is not None)
 
-    def displayResult(self, text, text_colour, subTitle="Press 'R' to restart."):
+    def displayResult(self, text, text_colour):
         if self.view_display_text is not None:
             return
 
         print(text)
         print(self.getTimeElapsed())
         self.view_display_text = self.font_large.render(text, True, text_colour, (149, 165, 166))
-        self.view_display_subtext = self.font_med.render(subTitle, True, (0,0,0))
         pass
 
 
@@ -752,7 +758,6 @@ class SimpleAUVSimulatorGame:
             elif event.key == pygame.K_p:
                 self.aerial_radius -= 1
 
-
         self.aerial_radius = np.clip(self.aerial_radius, 3, 15)
 
         return True
@@ -877,6 +882,9 @@ def runSim(worldId, mission_plans=None, depthPIDController=None, isPerfectContro
     fpsClock = pygame.time.Clock()
 
     if mission_plans is None:
+    
+        
+        mygame.view_display_subtext = mygame.font_med.render("Press 'R' to restart.", True, (0,0,0))
 
         # Game loop
         while mygame.spinOnceUser():
@@ -884,6 +892,9 @@ def runSim(worldId, mission_plans=None, depthPIDController=None, isPerfectContro
             pass
 
     else:
+    
+        mygame.view_display_subtext = mygame.font_med.render("Please ammend your mission plan.", True, (0,0,0))
+        
         # Game loop
         continue_run_sim = True
         for mission_logic in mission_plans:
@@ -920,7 +931,7 @@ def runSim(worldId, mission_plans=None, depthPIDController=None, isPerfectContro
         
         # Case: Mission Success or user terminate
         if not mygame.hasEpochEnded():
-            mygame.displayResult("WASTED! Mission Failed", (255, 75, 56), "Please ammend your mission plan.")
+            mygame.displayResult("WASTED! Mission Failed", (255, 75, 56))
             
         if continue_run_sim:
             while mygame.spinOnceMission():
@@ -934,7 +945,7 @@ def runSim(worldId, mission_plans=None, depthPIDController=None, isPerfectContro
 
 def main():
     parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--world', '-w', type=int, default=1, help='Select the Simulation World (1 to 5)')
+    parser.add_argument('--world', '-w', type=int, default=1, help='Select the Simulation World (1 to 6)')
     parser.add_argument('--perfect', '-p', default=False, action="store_true", help="Assumes perfect control over the AUV")
     parser.add_argument('--mission', '-m', default=False, action="store_true", help="Runs AUV's mission")
 
