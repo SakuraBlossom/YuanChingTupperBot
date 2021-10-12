@@ -123,10 +123,12 @@ GAME_ENVIRONMENT_DRIFT_Y    = randomSign()*(random.random()/2+0.5) * 0.0001
 ###=============== Mission Interface Functions ===============###
 
 class AUVInterface:
-    def __init__(self, gama_sim):
+    def __init__(self, gama_sim, mission_code=0):
         self.gama_sim = gama_sim
         
         self.is_ok = True
+        self.mission_code = 0
+  
         self.depthController = None
         self.last_depth_update_tick = 0
 
@@ -870,7 +872,7 @@ class thread_with_trace(threading.Thread):
         threading.Thread.join(self, *args)
 
 
-def runSim(worldId, mission_plans=None, depthPIDController=None, isPerfectControl=False):
+def runSim(worldId, mission_plans=None, depthPIDController=None, isPerfectControl=False, code=0):
 
     global GAME_CURRENT_WORLD
     GAME_CURRENT_WORLD = worldId
@@ -882,7 +884,7 @@ def runSim(worldId, mission_plans=None, depthPIDController=None, isPerfectContro
     pygame.display.set_caption("Simple Task Gate SIM")
 
     mygame = SimpleAUVSimulatorGame(depthPIDController, isPerfectControl)
-    myinterface = AUVInterface(mygame)
+    myinterface = AUVInterface(mygame, code)
     myinterface.depthController = depthPIDController
     fpsClock = pygame.time.Clock()
 
@@ -953,6 +955,7 @@ def main():
     parser.add_argument('--world', '-w', type=int, default=1, help='Select the Simulation World (1 to 6)')
     parser.add_argument('--perfect', '-p', default=False, action="store_true", help="Assumes perfect control over the AUV")
     parser.add_argument('--mission', '-m', default=False, action="store_true", help="Runs AUV's mission")
+    parser.add_argument('--code', '-c', type=int, default=0, help="Provides the AUV mission code (default: 0)")
 
     args = parser.parse_args()
     myMissions = None
@@ -962,7 +965,7 @@ def main():
         myMissions, myDepthPID = getMyMissionPlans()
     
     
-    runSim(args.world-1, myMissions, myDepthPID, args.perfect)
+    runSim(args.world-1, myMissions, myDepthPID, args.perfect, args.code)
     pass
 
 if __name__ == '__main__':
